@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <div class="angry-grid">
-      <div class="item itemGeneral-0">
+      <div class="item itemGeneral-0 white">
         <h2>{{ formatNumber(cycles) }}</h2>
         <div class="itemControl">
           <button v-on:click="cycles -= 1" v-if="!start"><MinusSVG /></button>
@@ -9,7 +9,7 @@
           <button v-on:click="cycles += 1" v-if="!start"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemGeneral-1">
+      <div class="item itemGeneral-1 white">
         <h2>{{ formatNumber(tabatas) }}</h2>
         <div class="itemControl">
           <button v-on:click="tabatas -= 1" v-if="!start"><MinusSVG /></button>
@@ -20,11 +20,25 @@
       <div class="item itemSmall-0">
         <img src="/assets/logo.png" alt="" />
       </div>
-      <div class="item itemMain">
-        <h4>total time</h4>
-        <h1>{{ totalTime }}</h1>
+      <div
+        class="item itemMain"
+        :class="{
+          prepare: currentAction.type === 'prepare',
+          work: currentAction.type === 'work',
+          rest: currentAction.type === 'rest',
+          white: !currentAction.type
+        }"
+      >
+        <h4>{{ currentAction.type ?? 'total time' }}</h4>
+        <h1
+          :class="{
+            hidden: hide
+          }"
+        >
+          {{ getTime(currentAction.time ?? totalTime) }}
+        </h1>
       </div>
-      <div class="item itemSmall-1" v-if="!start">
+      <div class="prepare item itemSmall-1" v-if="!start">
         <h4>{{ getTime(prepareTime) }}</h4>
         <div class="itemControl">
           <button :disabled="prepareTime === 0" v-on:click="prepareTime -= 10"><MinusSVG /></button>
@@ -32,7 +46,7 @@
           <button v-on:click="prepareTime += 10"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemSmall-2" v-if="!start">
+      <div class="item itemSmall-2 work" v-if="!start">
         <h4>{{ getTime(workTime) }}</h4>
         <div class="itemControl">
           <button :disabled="workTime === 0" v-on:click="workTime -= 10"><MinusSVG /></button>
@@ -40,7 +54,7 @@
           <button v-on:click="workTime += 10"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemSmall-3" v-if="!start">
+      <div class="item itemSmall-3 rest" v-if="!start">
         <h4>{{ getTime(restTime) }}</h4>
         <div class="itemControl">
           <button :disabled="restTime === 0" v-on:click="restTime -= 10"><MinusSVG /></button>
@@ -48,8 +62,8 @@
           <button v-on:click="restTime += 10"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemInProgress" v-if="start">
-        <h4>{{ totalTime }}</h4>
+      <div class="item itemInProgress white" v-if="start">
+        <h4>{{ getTime(remainingTime) }}</h4>
         <p>time remaining</p>
       </div>
     </div>
@@ -61,8 +75,8 @@
       </div>
 
       <div class="controlPanelRight">
-        <button v-if="start">{{ pause ? 'RESUME' : 'PAUSE' }}</button>
-        <button @click="onStart">{{ start ? 'STOP' : 'START' }}</button>
+        <button @click="onPause" v-if="start">{{ pause ? 'RESUME' : 'PAUSE' }}</button>
+        <button @click="onHandle">{{ start ? 'STOP' : 'START' }}</button>
       </div>
     </div>
   </div>
@@ -71,15 +85,19 @@
 <script>
 import PlusSVG from './assets/IcRoundPlus.vue'
 import MinusSVG from './assets/IcRoundMinus.vue'
+import stop from './audio/stop.wav'
+import start from './audio/start.wav'
+import work from './audio/work.wav'
+import rest from './audio/rest.wav'
 export default {
   name: 'App',
   components: { PlusSVG, MinusSVG },
   defaultOptions: {
     tabatas: 1,
     cycles: 8,
-    prepareTime: 10,
-    workTime: 30,
-    restTime: 10
+    prepareTime: 5,
+    workTime: 5,
+    restTime: 5
   },
   data() {
     return {
@@ -89,7 +107,14 @@ export default {
       workTime: this.$options.defaultOptions.workTime,
       restTime: this.$options.defaultOptions.restTime,
       start: false,
-      pause: false
+      pause: false,
+      remainingTime: 0,
+      intervalId: 0,
+      hide: false,
+      currentAction: {
+        type: undefined, // prepare --> work --> rest,
+        time: undefined
+      }
     }
   },
   created() {
@@ -102,6 +127,9 @@ export default {
         this[key] = +windowData[key]
       }
     })
+  },
+  beforeUnmount() {
+    clearInterval(this.intervalId)
   },
   methods: {
     formatNumber(num) {
@@ -117,15 +145,54 @@ export default {
       this.workTime = this.$options.defaultOptions.workTime
       this.restTime = this.$options.defaultOptions.restTime
     },
+    timerHandler() {
+      if (this.pause) {
+        this.hide = !this.hide
+        return
+      }
+      this.remainingTime -= 1
+      this.currentAction.time -= 1
+    },
     onStart() {
-      this.start = !this.start
-      console.log(this.start)
+      console.log('ON_START')
+      this.playSound(start)
+      this.remainingTime = this.totalTime
+      this.currentAction.type = 'prepare'
+      this.currentAction.time = this.prepareTime
+      this.start = true
+      this.intervalId = setInterval(this.timerHandler, 1000)
+    },
+    onStop() {
+      console.log('ON_STOP')
+      this.playSound(stop)
+      this.remainingTime = 0
+      this.start = false
+      this.currentAction.type = undefined
+      this.currentAction.time = undefined
+      clearInterval(this.intervalId)
+    },
+    onPause() {
+      if (this.hide) {
+        this.hide = !this.hide
+      }
+      this.pause = !this.pause
+    },
+    playSound(sound) {
+      if (sound) {
+        const audio = new Audio(sound)
+        audio.play()
+      }
     }
   },
   computed: {
+    onHandle() {
+      return this.start ? this.onStop : this.onStart
+    },
+    cycleTime() {
+      return this.workTime + this.restTime
+    },
     totalTime() {
-      const time = (this.workTime + this.restTime) * this.cycles * this.tabatas + this.prepareTime
-      return this.getTime(time)
+      return this.prepareTime + this.cycleTime * this.cycles * this.tabatas
     },
     pageStateOptions() {
       return {
@@ -144,6 +211,25 @@ export default {
       }, '')
 
       window.history.pushState(null, document.title, `${window.location.pathname}?${params}`)
+    },
+    remainingTime() {
+      if (this.remainingTime === 0) {
+        this.onStop()
+        return
+      }
+      if (this.remainingTime === this.cycleTime * (this.cycles - 1)) {
+        this.cycles -= 1
+      }
+      if (this.remainingTime === this.cycleTime * this.cycles - this.workTime) {
+        this.currentAction.type = 'rest'
+        this.currentAction.time = this.restTime
+        this.playSound(rest)
+      }
+      if (this.remainingTime === this.cycleTime * this.cycles) {
+        this.currentAction.type = 'work'
+        this.currentAction.time = this.workTime
+        this.playSound(work)
+      }
     }
   }
 }
@@ -179,9 +265,26 @@ export default {
     }
   }
 }
+.prepare {
+  background-color: darkorange;
+}
+
+.work {
+  background-color: darkgreen;
+}
+
+.rest {
+  background-color: darkred;
+}
+
+.white {
+  background-color: white;
+}
+.hidden {
+  opacity: 0;
+}
 
 .item {
-  background-color: white;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -219,7 +322,6 @@ export default {
   }
   &Small-1 {
     height: 60%;
-    background-color: darkorange;
     grid-row-start: 3;
     grid-row-end: 4;
     grid-column-end: 3;
@@ -227,7 +329,6 @@ export default {
   }
   &Small-2 {
     height: 60%;
-    background-color: green;
     grid-row-start: 3;
     grid-row-end: 4;
     grid-column-end: 4;
@@ -235,7 +336,7 @@ export default {
   }
   &Small-3 {
     height: 60%;
-    background-color: red;
+
     grid-row-start: 3;
     grid-row-end: 4;
     grid-column-start: 4;
