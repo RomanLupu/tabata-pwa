@@ -1,30 +1,30 @@
 <template>
   <div class="app">
     <div class="angry-grid">
-      <div class="item" id="item-0">
+      <div class="item itemGeneral-0">
         <h2>{{ formatNumber(cycles) }}</h2>
         <div class="itemControl">
-          <button v-on:click="cycles -= 1"><MinusSVG /></button>
+          <button v-on:click="cycles -= 1" v-if="!start"><MinusSVG /></button>
           <p>cycles</p>
-          <button v-on:click="cycles += 1"><PlusSVG /></button>
+          <button v-on:click="cycles += 1" v-if="!start"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item" id="item-1">
+      <div class="item itemGeneral-1">
         <h2>{{ formatNumber(tabatas) }}</h2>
         <div class="itemControl">
-          <button v-on:click="tabatas -= 1"><MinusSVG /></button>
+          <button v-on:click="tabatas -= 1" v-if="!start"><MinusSVG /></button>
           <p>tabatas</p>
-          <button v-on:click="tabatas += 1"><PlusSVG /></button>
+          <button v-on:click="tabatas += 1" v-if="!start"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemSmaller" id="item-2">
+      <div class="item itemSmall-0">
         <img src="/assets/logo.png" alt="" />
       </div>
-      <div class="item" id="item-3">
+      <div class="item itemMain">
         <h4>total time</h4>
         <h1>{{ totalTime }}</h1>
       </div>
-      <div class="item itemSmaller" id="item-4">
+      <div class="item itemSmall-1" v-if="!start">
         <h4>{{ getTime(prepareTime) }}</h4>
         <div class="itemControl">
           <button :disabled="prepareTime === 0" v-on:click="prepareTime -= 10"><MinusSVG /></button>
@@ -32,7 +32,7 @@
           <button v-on:click="prepareTime += 10"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemSmaller" id="item-5">
+      <div class="item itemSmall-2" v-if="!start">
         <h4>{{ getTime(workTime) }}</h4>
         <div class="itemControl">
           <button :disabled="workTime === 0" v-on:click="workTime -= 10"><MinusSVG /></button>
@@ -40,7 +40,7 @@
           <button v-on:click="workTime += 10"><PlusSVG /></button>
         </div>
       </div>
-      <div class="item itemSmaller" id="item-6">
+      <div class="item itemSmall-3" v-if="!start">
         <h4>{{ getTime(restTime) }}</h4>
         <div class="itemControl">
           <button :disabled="restTime === 0" v-on:click="restTime -= 10"><MinusSVG /></button>
@@ -48,14 +48,22 @@
           <button v-on:click="restTime += 10"><PlusSVG /></button>
         </div>
       </div>
+      <div class="item itemInProgress" v-if="start">
+        <h4>{{ totalTime }}</h4>
+        <p>time remaining</p>
+      </div>
     </div>
     <div class="controlPanel">
-      <div>
+      <div class="controlPanelLeft">
         <button v-on:click="resetOptions">Reset</button>
         <button>Sounds On</button>
         <button>Share</button>
       </div>
-      <button>START</button>
+
+      <div class="controlPanelRight">
+        <button v-if="start">{{ pause ? 'RESUME' : 'PAUSE' }}</button>
+        <button @click="onStart">{{ start ? 'STOP' : 'START' }}</button>
+      </div>
     </div>
   </div>
 </template>
@@ -79,7 +87,9 @@ export default {
       cycles: this.$options.defaultOptions.cycles,
       prepareTime: this.$options.defaultOptions.prepareTime,
       workTime: this.$options.defaultOptions.workTime,
-      restTime: this.$options.defaultOptions.restTime
+      restTime: this.$options.defaultOptions.restTime,
+      start: false,
+      pause: false
     }
   },
   created() {
@@ -106,6 +116,10 @@ export default {
       this.prepareTime = this.$options.defaultOptions.prepareTime
       this.workTime = this.$options.defaultOptions.workTime
       this.restTime = this.$options.defaultOptions.restTime
+    },
+    onStart() {
+      this.start = !this.start
+      console.log(this.start)
     }
   },
   computed: {
@@ -141,22 +155,31 @@ export default {
 }
 .angry-grid {
   display: grid;
-
   grid-template-rows: 1fr 1fr 1fr;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-
   gap: 8px;
   height: 600px;
-
   color: black;
 }
+
 .controlPanel {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: -50px;
+
+  &Left,
+  &Right {
+    display: flex;
+    gap: 10px;
+
+    button {
+      min-width: 125px;
+    }
+  }
 }
+
 .item {
   background-color: white;
   border-radius: 8px;
@@ -166,11 +189,73 @@ export default {
   flex-direction: column;
   padding: 5px;
 
+  &Main {
+    grid-row-start: 1;
+    grid-row-end: 3;
+    grid-column-start: 2;
+    grid-column-end: 5;
+  }
+
+  &General-0 {
+    grid-row-start: 1;
+    grid-row-end: 2;
+    grid-column-start: 1;
+    grid-column-end: 2;
+  }
+
+  &General-1 {
+    grid-row-start: 2;
+    grid-row-end: 3;
+    grid-column-start: 1;
+    grid-column-end: 2;
+  }
+  &Small-0 {
+    height: 60%;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    grid-column-start: 1;
+    grid-column-end: 2;
+    background-color: rgb(25, 101, 120);
+  }
+  &Small-1 {
+    height: 60%;
+    background-color: darkorange;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    grid-column-end: 3;
+    grid-column-start: 2;
+  }
+  &Small-2 {
+    height: 60%;
+    background-color: green;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    grid-column-end: 4;
+    grid-column-start: 3;
+  }
+  &Small-3 {
+    height: 60%;
+    background-color: red;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    grid-column-start: 4;
+    grid-column-end: 5;
+  }
+  &InProgress {
+    height: 60%;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    grid-column-start: 2;
+    grid-column-end: 5;
+  }
+
   &Control {
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-evenly;
+    height: 24px;
+
     button {
       padding: 3px 6px;
       display: flex;
@@ -203,66 +288,5 @@ export default {
   img {
     width: 75%;
   }
-
-  &Smaller {
-    height: 60%;
-  }
-}
-
-#item-0 {
-  background-color: white;
-  grid-row-start: 1;
-  grid-column-start: 1;
-
-  grid-row-end: 2;
-  grid-column-end: 2;
-}
-#item-1 {
-  background-color: white;
-  grid-row-start: 2;
-  grid-column-start: 1;
-
-  grid-row-end: 3;
-  grid-column-end: 2;
-}
-#item-2 {
-  background-color: rgb(25, 101, 120);
-  grid-row-start: 3;
-  grid-column-start: 1;
-
-  grid-row-end: 4;
-  grid-column-end: 2;
-}
-#item-3 {
-  background-color: white;
-  grid-row-start: 1;
-  grid-column-start: 2;
-
-  grid-row-end: 3;
-  grid-column-end: 5;
-}
-#item-4 {
-  background-color: darkorange;
-  grid-row-start: 3;
-  grid-column-start: 2;
-
-  grid-row-end: 4;
-  grid-column-end: 3;
-}
-#item-5 {
-  background-color: green;
-  grid-row-start: 3;
-  grid-column-start: 3;
-
-  grid-row-end: 4;
-  grid-column-end: 4;
-}
-#item-6 {
-  background-color: red;
-  grid-row-start: 3;
-  grid-column-start: 4;
-
-  grid-row-end: 4;
-  grid-column-end: 5;
 }
 </style>
