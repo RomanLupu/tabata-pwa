@@ -1,116 +1,124 @@
 <template>
   <div class="app">
-    <div class="angry-grid">
-      <div class="item itemGeneral-0 white">
-        <h2>{{ formatNumber(cycles) }}</h2>
-        <div class="itemControl">
-          <button v-on:click="cycles -= 1" v-if="!start"><MinusSVG /></button>
-          <p>cycles</p>
-          <button v-on:click="cycles += 1" v-if="!start"><PlusSVG /></button>
+    <div class="content">
+      <div class="angry-grid">
+        <div class="item itemGeneral-0 white">
+          <h2>{{ formatNumber(cyclesLeft) }}</h2>
+          <div class="itemControl">
+            <button @click="cyclesLeft -= 1" v-if="!start"><MinusSVG /></button>
+            <p>cycles</p>
+            <button @click="cyclesLeft += 1" v-if="!start"><PlusSVG /></button>
+          </div>
         </div>
-      </div>
-      <div class="item itemGeneral-1 white">
-        <h2>{{ formatNumber(tabatas) }}</h2>
-        <div class="itemControl">
-          <button v-on:click="tabatas -= 1" v-if="!start"><MinusSVG /></button>
-          <p>tabatas</p>
-          <button v-on:click="tabatas += 1" v-if="!start"><PlusSVG /></button>
+        <div class="item itemGeneral-1 white">
+          <h2>{{ formatNumber(tabatas) }}</h2>
+          <div class="itemControl">
+            <button @click="tabatas -= 1" v-if="!start"><MinusSVG /></button>
+            <p>tabatas</p>
+            <button @click="tabatas += 1" v-if="!start"><PlusSVG /></button>
+          </div>
         </div>
-      </div>
-      <div class="item itemSmall-0">
-        <img src="/assets/logo.png" alt="" />
-      </div>
-      <div
-        class="item itemMain"
-        :class="{
-          prepare: currentAction.type === 'prepare',
-          work: currentAction.type === 'work',
-          rest: currentAction.type === 'rest',
-          white: !currentAction.type
-        }"
-      >
-        <h4>{{ currentAction.type ?? 'total time' }}</h4>
-        <h1
+        <div class="item itemSmall-0">
+          <img src="/assets/logo.png" alt="" />
+        </div>
+        <div
+          class="item itemMain"
           :class="{
-            hidden: hide
+            prepare: currentAction.type === 'prepare',
+            work: currentAction.type === 'work',
+            rest: currentAction.type === 'rest',
+            white: !currentAction.type
           }"
         >
-          {{ getTime(currentAction.time ?? totalTime) }}
-        </h1>
-      </div>
-      <div class="prepare item itemSmall-1" v-if="!start">
-        <h4>{{ getTime(prepareTime) }}</h4>
-        <div class="itemControl">
-          <button :disabled="prepareTime === 0" v-on:click="prepareTime -= 10"><MinusSVG /></button>
-          <p>prepare</p>
-          <button v-on:click="prepareTime += 10"><PlusSVG /></button>
+          <h4>{{ currentAction.type ?? 'total time' }}</h4>
+          <h1
+            :class="{
+              hidden: hide
+            }"
+          >
+            {{ getTime(currentAction.time ?? totalTime) }}
+          </h1>
+        </div>
+        <div class="prepare item itemSmall-1" v-if="!start">
+          <h4>{{ getTime(prepareTime) }}</h4>
+          <div class="itemControl">
+            <button :disabled="prepareTime === 0" @click="prepareTime -= 10"><MinusSVG /></button>
+            <p>prepare</p>
+            <button @click="prepareTime += 10"><PlusSVG /></button>
+          </div>
+        </div>
+        <div class="item itemSmall-2 work" v-if="!start">
+          <h4>{{ getTime(workTime) }}</h4>
+          <div class="itemControl">
+            <button :disabled="workTime === 0" @click="workTime -= 10"><MinusSVG /></button>
+            <p>work</p>
+            <button @click="workTime += 10"><PlusSVG /></button>
+          </div>
+        </div>
+        <div class="item itemSmall-3 rest" v-if="!start">
+          <h4>{{ getTime(restTime) }}</h4>
+          <div class="itemControl">
+            <button :disabled="restTime === 0" @click="restTime -= 10"><MinusSVG /></button>
+            <p>rest</p>
+            <button @click="restTime += 10"><PlusSVG /></button>
+          </div>
+        </div>
+        <div class="item itemInProgress white" v-if="start">
+          <h4>{{ getTime(remainingTime) }}</h4>
+          <p>time remaining</p>
         </div>
       </div>
-      <div class="item itemSmall-2 work" v-if="!start">
-        <h4>{{ getTime(workTime) }}</h4>
-        <div class="itemControl">
-          <button :disabled="workTime === 0" v-on:click="workTime -= 10"><MinusSVG /></button>
-          <p>work</p>
-          <button v-on:click="workTime += 10"><PlusSVG /></button>
+      <div class="controlPanel">
+        <div class="controlPanelLeft">
+          <button @click="resetOptions">Reset</button>
+          <button @click="mute = !mute">{{ mute ? 'Sounds OFF' : 'Sounds ON' }}</button>
+          <button @click="isOpenModal = true">Share</button>
         </div>
-      </div>
-      <div class="item itemSmall-3 rest" v-if="!start">
-        <h4>{{ getTime(restTime) }}</h4>
-        <div class="itemControl">
-          <button :disabled="restTime === 0" v-on:click="restTime -= 10"><MinusSVG /></button>
-          <p>rest</p>
-          <button v-on:click="restTime += 10"><PlusSVG /></button>
-        </div>
-      </div>
-      <div class="item itemInProgress white" v-if="start">
-        <h4>{{ getTime(remainingTime) }}</h4>
-        <p>time remaining</p>
-      </div>
-    </div>
-    <div class="controlPanel">
-      <div class="controlPanelLeft">
-        <button v-on:click="resetOptions">Reset</button>
-        <button>Sounds On</button>
-        <button>Share</button>
-      </div>
 
-      <div class="controlPanelRight">
-        <button @click="onPause" v-if="start">{{ pause ? 'RESUME' : 'PAUSE' }}</button>
-        <button @click="onHandle">{{ start ? 'STOP' : 'START' }}</button>
+        <div class="controlPanelRight">
+          <button @click="onPause" v-if="start">{{ pause ? 'RESUME' : 'PAUSE' }}</button>
+          <button @click="onHandle">{{ start ? 'STOP' : 'START' }}</button>
+        </div>
       </div>
+      <app-modal @closeModal="isOpenModal = false" v-if="isOpenModal" />
     </div>
   </div>
 </template>
 
 <script>
+import AppModal from './components/AppModal.vue'
 import PlusSVG from './assets/IcRoundPlus.vue'
 import MinusSVG from './assets/IcRoundMinus.vue'
 import stop from './audio/stop.wav'
 import start from './audio/start.wav'
 import work from './audio/work.wav'
 import rest from './audio/rest.wav'
+
 export default {
   name: 'App',
-  components: { PlusSVG, MinusSVG },
+  components: { PlusSVG, MinusSVG, AppModal },
   defaultOptions: {
     tabatas: 1,
-    cycles: 8,
+    cyclesLeft: 8,
     prepareTime: 5,
     workTime: 5,
     restTime: 5
   },
   data() {
     return {
-      tabatas: this.$options.defaultOptions.tabatas,
-      cycles: this.$options.defaultOptions.cycles,
-      prepareTime: this.$options.defaultOptions.prepareTime,
-      workTime: this.$options.defaultOptions.workTime,
-      restTime: this.$options.defaultOptions.restTime,
+      tabatas: 1,
+      cycles: 8,
+      cyclesLeft: 8,
+      prepareTime: 20,
+      workTime: 30,
+      restTime: 10,
       start: false,
       pause: false,
       remainingTime: 0,
       intervalId: 0,
       hide: false,
+      mute: false,
+      isOpenModal: false,
       currentAction: {
         type: undefined, // prepare --> work --> rest,
         time: undefined
@@ -120,7 +128,7 @@ export default {
   created() {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
 
-    const VALID_KEYS = ['tabatas', 'cycles', 'prepareTime', 'workTime', 'restTime']
+    const VALID_KEYS = ['tabatas', 'cyclesLeft', 'prepareTime', 'workTime', 'restTime']
 
     VALID_KEYS.forEach((key) => {
       if (windowData[key]) {
@@ -140,7 +148,7 @@ export default {
     },
     resetOptions() {
       this.tabatas = this.$options.defaultOptions.tabatas
-      this.cycles = this.$options.defaultOptions.cycles
+      this.cyclesLeft = this.$options.defaultOptions.cyclesLeft
       this.prepareTime = this.$options.defaultOptions.prepareTime
       this.workTime = this.$options.defaultOptions.workTime
       this.restTime = this.$options.defaultOptions.restTime
@@ -154,21 +162,18 @@ export default {
       this.currentAction.time -= 1
     },
     onStart() {
-      console.log('ON_START')
       this.playSound(start)
-      this.remainingTime = this.totalTime
-      this.currentAction.type = 'prepare'
-      this.currentAction.time = this.prepareTime
       this.start = true
+      this.cycles = this.cyclesLeft
+      this.remainingTime = this.totalTime
+      this.setCurrentAction('prepare', this.prepareTime)
       this.intervalId = setInterval(this.timerHandler, 1000)
     },
     onStop() {
-      console.log('ON_STOP')
       this.playSound(stop)
-      this.remainingTime = 0
       this.start = false
-      this.currentAction.type = undefined
-      this.currentAction.time = undefined
+      this.remainingTime = 0
+      this.setCurrentAction(undefined, undefined)
       clearInterval(this.intervalId)
     },
     onPause() {
@@ -178,10 +183,14 @@ export default {
       this.pause = !this.pause
     },
     playSound(sound) {
-      if (sound) {
+      if (sound && !this.mute) {
         const audio = new Audio(sound)
         audio.play()
       }
+    },
+    setCurrentAction(type, duration) {
+      this.currentAction.type = type
+      this.currentAction.time = duration
     }
   },
   computed: {
@@ -192,14 +201,23 @@ export default {
       return this.workTime + this.restTime
     },
     totalTime() {
-      return this.prepareTime + this.cycleTime * this.cycles * this.tabatas
+      return (this.prepareTime + this.cycleTime * this.cyclesLeft) * this.tabatas
+    },
+    totalCycles() {
+      return this.cyclesLeft + this.cycles * (this.tabatas - 1)
+    },
+    totalPrepareTime() {
+      return this.prepareTime * (this.tabatas - 1)
+    },
+    totalRemainingTime() {
+      return this.cycleTime * this.totalCycles + this.totalPrepareTime
     },
     pageStateOptions() {
       return {
         prepareTime: this.prepareTime,
         workTime: this.workTime,
         restTime: this.restTime,
-        cycles: this.cycles,
+        cyclesLeft: this.cyclesLeft,
         tabatas: this.tabatas
       }
     }
@@ -217,17 +235,21 @@ export default {
         this.onStop()
         return
       }
-      if (this.remainingTime === this.cycleTime * (this.cycles - 1)) {
-        this.cycles -= 1
+      if (this.remainingTime === this.totalRemainingTime - this.cycleTime) {
+        this.cyclesLeft -= 1
+
+        if (this.cyclesLeft === 0) {
+          this.tabatas -= 1
+          this.cyclesLeft = this.cycles
+          this.setCurrentAction('prepare', this.prepareTime)
+        }
       }
-      if (this.remainingTime === this.cycleTime * this.cycles - this.workTime) {
-        this.currentAction.type = 'rest'
-        this.currentAction.time = this.restTime
+      if (this.remainingTime === this.totalRemainingTime - this.workTime) {
+        this.setCurrentAction('rest', this.restTime)
         this.playSound(rest)
       }
-      if (this.remainingTime === this.cycleTime * this.cycles) {
-        this.currentAction.type = 'work'
-        this.currentAction.time = this.workTime
+      if (this.remainingTime === this.totalRemainingTime) {
+        this.setCurrentAction('work', this.workTime)
         this.playSound(work)
       }
     }
@@ -237,7 +259,11 @@ export default {
 
 <style lang="scss" scoped>
 .app {
+  width: 100%;
+}
+.content {
   width: 1200px;
+  margin: auto;
 }
 .angry-grid {
   display: grid;
@@ -336,7 +362,6 @@ export default {
   }
   &Small-3 {
     height: 60%;
-
     grid-row-start: 3;
     grid-row-end: 4;
     grid-column-start: 4;
