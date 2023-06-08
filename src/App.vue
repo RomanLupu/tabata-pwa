@@ -2,71 +2,57 @@
   <div class="app">
     <div class="content">
       <div class="angry-grid">
-        <div class="item itemGeneral-0 white">
-          <h2>{{ formatNumber(cyclesLeft) }}</h2>
-          <div class="itemControl">
-            <button @click="cyclesLeft -= 1" v-if="!start"><MinusSVG /></button>
-            <p>cycles</p>
-            <button @click="cyclesLeft += 1" v-if="!start"><PlusSVG /></button>
-          </div>
-        </div>
-        <div class="item itemGeneral-1 white">
-          <h2>{{ formatNumber(tabatas) }}</h2>
-          <div class="itemControl">
-            <button @click="tabatas -= 1" v-if="!start"><MinusSVG /></button>
-            <p>tabatas</p>
-            <button @click="tabatas += 1" v-if="!start"><PlusSVG /></button>
-          </div>
-        </div>
-        <div class="item itemSmall-0">
-          <img src="/assets/logo.png" alt="" />
-        </div>
+        <SideCard
+          title="cycles"
+          :value="cyclesLeft"
+          :start="start"
+          dataType="cyclesLeft"
+          @on-add="onAdd"
+          @on-remove="onRemove"
+        />
+        <SideCard
+          title="tabatas"
+          :value="tabatasLeft"
+          :start="start"
+          dataType="tabatasLeft"
+          @on-add="onAdd"
+          @on-remove="onRemove"
+        />
+        <LogoCard />
         <div
-          class="item itemMain"
-          :class="{
-            prepare: currentAction.type === 'prepare',
-            work: currentAction.type === 'work',
-            rest: currentAction.type === 'rest',
-            white: !currentAction.type
-          }"
+          class="item mainCard"
+          :class="{ [currentAction.type]: currentAction.type, white: !currentAction.type }"
         >
           <h4>{{ currentAction.type ?? 'total time' }}</h4>
-          <h1
-            :class="{
-              hidden: hide
-            }"
-          >
+          <h1 :class="{ hidden: hide }">
             {{ getTime(currentAction.time ?? totalTime) }}
           </h1>
         </div>
-        <div class="prepare item itemSmall-1" v-if="!start">
-          <h4>{{ getTime(prepareTime) }}</h4>
-          <div class="itemControl">
-            <button :disabled="prepareTime === 0" @click="prepareTime -= 10"><MinusSVG /></button>
-            <p>prepare</p>
-            <button @click="prepareTime += 10"><PlusSVG /></button>
-          </div>
-        </div>
-        <div class="item itemSmall-2 work" v-if="!start">
-          <h4>{{ getTime(workTime) }}</h4>
-          <div class="itemControl">
-            <button :disabled="workTime === 0" @click="workTime -= 10"><MinusSVG /></button>
-            <p>work</p>
-            <button @click="workTime += 10"><PlusSVG /></button>
-          </div>
-        </div>
-        <div class="item itemSmall-3 rest" v-if="!start">
-          <h4>{{ getTime(restTime) }}</h4>
-          <div class="itemControl">
-            <button :disabled="restTime === 0" @click="restTime -= 10"><MinusSVG /></button>
-            <p>rest</p>
-            <button @click="restTime += 10"><PlusSVG /></button>
-          </div>
-        </div>
-        <div class="item itemInProgress white" v-if="start">
-          <h4>{{ getTime(remainingTime) }}</h4>
-          <p>time remaining</p>
-        </div>
+        <BottomCard
+          data-type="prepare"
+          :value="prepare"
+          class="bottomPrepare"
+          @on-increase="onIncrease"
+          @on-decrease="onDecrease"
+          v-if="!start"
+        />
+        <BottomCard
+          data-type="work"
+          :value="work"
+          class="bottomWork"
+          @on-increase="onIncrease"
+          @on-decrease="onDecrease"
+          v-if="!start"
+        />
+        <BottomCard
+          data-type="rest"
+          :value="rest"
+          class="bottomRest"
+          @on-increase="onIncrease"
+          @on-decrease="onDecrease"
+          v-if="!start"
+        />
+        <RemainingCard :value="remainingTime" v-if="start" />
       </div>
       <div class="controlPanel">
         <div class="controlPanelLeft">
@@ -93,25 +79,33 @@ import stop from './audio/stop.wav'
 import start from './audio/start.wav'
 import work from './audio/work.wav'
 import rest from './audio/rest.wav'
+import { formatNumber, getTime } from './helpers/time.js'
+import BottomCard from './components/BottomCard.vue'
+import LogoCard from './components/LogoCard.vue'
+import RemainingCard from './components/RemainingCard.vue'
+import SideCard from './components/SideCard.vue'
 
 export default {
   name: 'App',
-  components: { PlusSVG, MinusSVG, AppModal },
+  components: { SideCard, RemainingCard, LogoCard, PlusSVG, MinusSVG, AppModal, BottomCard },
   defaultOptions: {
+    tabatasLeft: 1,
     tabatas: 1,
     cyclesLeft: 8,
-    prepareTime: 5,
-    workTime: 5,
-    restTime: 5
+    cycles: 8,
+    prepare: 5,
+    work: 5,
+    rest: 5
   },
   data() {
     return {
       tabatas: 1,
+      tabatasLeft: 1,
       cycles: 8,
       cyclesLeft: 8,
-      prepareTime: 20,
-      workTime: 30,
-      restTime: 10,
+      prepare: 20,
+      work: 30,
+      rest: 10,
       start: false,
       pause: false,
       remainingTime: 0,
@@ -128,7 +122,7 @@ export default {
   created() {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
 
-    const VALID_KEYS = ['tabatas', 'cyclesLeft', 'prepareTime', 'workTime', 'restTime']
+    const VALID_KEYS = ['tabatasLeft', 'cyclesLeft', 'prepare', 'work', 'rest']
 
     VALID_KEYS.forEach((key) => {
       if (windowData[key]) {
@@ -140,18 +134,22 @@ export default {
     clearInterval(this.intervalId)
   },
   methods: {
-    formatNumber(num) {
-      return num > 9 ? num : '0' + num
+    formatNumber,
+    getTime,
+    onAdd(type) {
+      this[type] += 1
     },
-    getTime(seconds) {
-      return new Date(1000 * seconds).toISOString().substring(14, 19)
+    onRemove(type) {
+      this[type] -= 1
+    },
+    onIncrease(type) {
+      this[type] += 10
+    },
+    onDecrease(type) {
+      this[type] -= 10
     },
     resetOptions() {
-      this.tabatas = this.$options.defaultOptions.tabatas
-      this.cyclesLeft = this.$options.defaultOptions.cyclesLeft
-      this.prepareTime = this.$options.defaultOptions.prepareTime
-      this.workTime = this.$options.defaultOptions.workTime
-      this.restTime = this.$options.defaultOptions.restTime
+      window.location.search = ''
     },
     timerHandler() {
       if (this.pause) {
@@ -165,14 +163,17 @@ export default {
       this.playSound(start)
       this.start = true
       this.cycles = this.cyclesLeft
+      this.tabatas = this.tabatasLeft
       this.remainingTime = this.totalTime
-      this.setCurrentAction('prepare', this.prepareTime)
+      this.setCurrentAction('prepare', this.prepare)
       this.intervalId = setInterval(this.timerHandler, 1000)
     },
     onStop() {
       this.playSound(stop)
       this.start = false
       this.remainingTime = 0
+      this.cyclesLeft = this.cycles
+      this.tabatasLeft = this.tabatas
       this.setCurrentAction(undefined, undefined)
       clearInterval(this.intervalId)
     },
@@ -198,27 +199,27 @@ export default {
       return this.start ? this.onStop : this.onStart
     },
     cycleTime() {
-      return this.workTime + this.restTime
+      return this.work + this.rest
     },
     totalTime() {
-      return (this.prepareTime + this.cycleTime * this.cyclesLeft) * this.tabatas
+      return (this.prepare + this.cycleTime * this.cyclesLeft) * this.tabatasLeft
     },
     totalCycles() {
-      return this.cyclesLeft + this.cycles * (this.tabatas - 1)
+      return this.cyclesLeft + this.cycles * (this.tabatasLeft - 1)
     },
     totalPrepareTime() {
-      return this.prepareTime * (this.tabatas - 1)
+      return this.prepare * (this.tabatasLeft - 1)
     },
     totalRemainingTime() {
       return this.cycleTime * this.totalCycles + this.totalPrepareTime
     },
     pageStateOptions() {
       return {
-        prepareTime: this.prepareTime,
-        workTime: this.workTime,
-        restTime: this.restTime,
+        prepare: this.prepare,
+        work: this.work,
+        rest: this.rest,
         cyclesLeft: this.cyclesLeft,
-        tabatas: this.tabatas
+        tabatasLeft: this.tabatasLeft
       }
     }
   },
@@ -239,17 +240,17 @@ export default {
         this.cyclesLeft -= 1
 
         if (this.cyclesLeft === 0) {
-          this.tabatas -= 1
+          this.tabatasLeft -= 1
           this.cyclesLeft = this.cycles
-          this.setCurrentAction('prepare', this.prepareTime)
+          this.setCurrentAction('prepare', this.prepare)
         }
       }
-      if (this.remainingTime === this.totalRemainingTime - this.workTime) {
-        this.setCurrentAction('rest', this.restTime)
+      if (this.remainingTime === this.totalRemainingTime - this.work) {
+        this.setCurrentAction('rest', this.rest)
         this.playSound(rest)
       }
       if (this.remainingTime === this.totalRemainingTime) {
-        this.setCurrentAction('work', this.workTime)
+        this.setCurrentAction('work', this.work)
         this.playSound(work)
       }
     }
@@ -291,128 +292,34 @@ export default {
     }
   }
 }
-.prepare {
-  background-color: darkorange;
-}
-
-.work {
-  background-color: darkgreen;
-}
-
-.rest {
-  background-color: darkred;
-}
-
-.white {
-  background-color: white;
-}
 .hidden {
   opacity: 0;
 }
 
-.item {
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 5px;
-
-  &Main {
-    grid-row-start: 1;
-    grid-row-end: 3;
-    grid-column-start: 2;
-    grid-column-end: 5;
-  }
-
-  &General-0 {
-    grid-row-start: 1;
-    grid-row-end: 2;
-    grid-column-start: 1;
-    grid-column-end: 2;
-  }
-
-  &General-1 {
-    grid-row-start: 2;
-    grid-row-end: 3;
-    grid-column-start: 1;
-    grid-column-end: 2;
-  }
-  &Small-0 {
-    height: 60%;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    grid-column-start: 1;
-    grid-column-end: 2;
-    background-color: rgb(25, 101, 120);
-  }
-  &Small-1 {
-    height: 60%;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    grid-column-end: 3;
-    grid-column-start: 2;
-  }
-  &Small-2 {
-    height: 60%;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    grid-column-end: 4;
-    grid-column-start: 3;
-  }
-  &Small-3 {
-    height: 60%;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    grid-column-start: 4;
-    grid-column-end: 5;
-  }
-  &InProgress {
-    height: 60%;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    grid-column-start: 2;
-    grid-column-end: 5;
-  }
-
-  &Control {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    height: 24px;
-
-    button {
-      padding: 3px 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-  h1 {
-    margin: 0;
-    font-size: 186px;
-    font-weight: bold;
-  }
-  h2 {
-    margin: 0;
-    font-size: 64px;
-    font-weight: bold;
-  }
-  h4 {
-    margin: 0;
-    font-size: 32px;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-
-  p {
-    font-size: 14px;
-    margin: 0;
-    text-transform: uppercase;
-  }
-  img {
-    width: 75%;
-  }
+.cyclesCard {
+  grid-row-start: 1;
+  grid-row-end: 2;
+}
+.tabatasCard {
+  grid-row-start: 2;
+  grid-row-end: 3;
+}
+.mainCard {
+  grid-row-start: 1;
+  grid-row-end: 3;
+  grid-column-start: 2;
+  grid-column-end: 5;
+}
+.bottomPrepare {
+  grid-column-start: 2;
+  grid-column-end: 3;
+}
+.bottomWork {
+  grid-column-start: 3;
+  grid-column-end: 4;
+}
+.bottomRest {
+  grid-column-start: 4;
+  grid-column-end: 5;
 }
 </style>

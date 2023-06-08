@@ -87,3 +87,53 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.prepare {
+  background-color: darkorange;
+}
+
+.work {
+  background-color: darkgreen;
+}
+
+.rest {
+  background-color: darkred;
+}
+
+.white {
+  background-color: white;
+}
+
+.item {
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 5px;
+}
+
+.item h1 {
+  margin: 0;
+  font-size: 186px;
+  font-weight: bold;
+}
+
+.item h2 {
+  margin: 0;
+  font-size: 64px;
+  font-weight: bold;
+}
+
+.item h4 {
+  margin: 0;
+  font-size: 38px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.item p {
+  font-size: 18px;
+  margin: 0;
+  text-transform: uppercase;
+}
